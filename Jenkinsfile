@@ -1,33 +1,96 @@
 pipeline {
     agent any
-
+    
+    environment {
+        DOCKER_IMAGE = "movie-express-app"
+        DOCKER_TAG = "${env.BUILD_NUMBER}"
+        CONTAINER_NAME = "movie-app-container"
+    }
+    
     stages {
-        stage('Build Docker image') {
+        stage('Checkout') {
             steps {
+                echo 'Fetching code...'
+                checkout scm
+            }
+        }
+        
+        stage('Build Docker Image') {
+            steps {
+                echo 'Building Docker image...'
                 script {
-                    dockerImage = docker.build("movie-express-app:latest")
+                    try {
+                        sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+                        sh "docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest"
+                    } catch (Exception e) {
+                        echo "Error building Docker image: ${e.message}"
+                        throw e
+                    }
                 }
             }
         }
-        stage('Run container') {
+        
+        stage('Run Tests') {
             steps {
+                echo 'Running tests...'
                 script {
-                    dockerContainer = docker.image("movie-express-app:latest").run("-d -p 3000:3000")
+                    try {
+                        sh "docker run --rm ${DOCKER_IMAGE}:${DOCKER_TAG} npm test"
+                    } catch (Exception e) {
+                        echo "Tests failed: ${e.message}"
+                        throw e
+                    }
                 }
             }
         }
-        stage('Test /travel endpoint') {
+        
+        stage('Deploy') {
             steps {
-                sleep 5
-                sh 'curl --fail http://localhost:3000/travel | grep "Minu lemmik reisisihtkoht on Jaapan."'
+                echo 'Starting container...'
+                script {
+                    try {
+                        sh "docker rm -f ${CONTAINER_NAME} || true"
+                        sh "docker run -d -p 3000:3000 --name ${CONTAINER_NAME} ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                    } catch (Exception e) {
+                        echo "Error starting container: ${e.message}"
+                        throw e
+                    }
+                }
+            }
+        }
+        
+        stage('Verify Application') {
+            steps {
+                echo 'Verifying application...'
+                script {
+                    try {
+                        sh 'sleep 5'
+                        sh 'curl http://localhost:3000'
+                    } catch (Exception e) {
+                        echo "Application verification failed: ${e.message}"
+                        throw e
+                    }
+                }
             }
         }
     }
+    
     post {
         always {
-            script {
-                sh "docker ps -q --filter ancestor=movie-express-app:latest | xargs -r docker stop"
-            }
+            echo 'Cleaning up Docker resources...'
+            sh "docker stop ${CONTAINER_NAME} || true"
+            sh "docker rm ${CONTAINER_NAME} || true"
+            
+            sh "docker rmi ${DOCKER_IMAGE}:${DOCKER_TAG} || true"
+            sh "docker rmi ${DOCKER_IMAGE}:latest || true"
+            
+            sh "docker image prune -f || true"
+        }
+        success {
+            echo 'Build completed successfully!'
+        }
+        failure {
+            echo 'Build failed!'
         }
     }
 }
