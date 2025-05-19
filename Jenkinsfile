@@ -12,16 +12,14 @@ pipeline {
         stage('Run container') {
             steps {
                 script {
-                    dockerContainer = docker.run("movie-express-app:latest", "-d -p 3000:3000")
+                    dockerContainer = docker.image("movie-express-app:latest").run("-d -p 3000:3000")
                 }
             }
         }
         stage('Test /travel endpoint') {
             steps {
-                script {
-                    sleep 5 
-                    sh 'curl --fail http://localhost:3000/travel | grep "Minu lemmik reisisihtkoht on Jaapan."'
-                }
+                sleep 5
+                sh 'curl --fail http://localhost:3000/travel | grep "Minu lemmik reisisihtkoht on Jaapan."'
             }
         }
     }
