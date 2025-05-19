@@ -15,7 +15,7 @@ pipeline {
         stage('Test /travel endpoint') {
             steps {
                 sleep 5
-                sh 'curl --fail http://localhost:3000/travel | grep "Minu lemmik reisisihtkoht on Jaapan"'
+                sh 'curl --fail http://localhost:3000/travel | grep "Minu lemmik reisisihtkoht on Jaapan."'
             }
         }
     }

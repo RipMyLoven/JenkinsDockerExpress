@@ -8,7 +8,7 @@ function hello(name) {
 }
 
 app.get('/travel', (req, res) => {
-res.json({"text": hello("Jaapan")});
+  res.send("Minu lemmik reisisihtkoht on Jaapan.");
 });
 
 if (require.main === module) {
