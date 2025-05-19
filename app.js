@@ -4,11 +4,11 @@ const PORT = 3000;
 
 
 function hello(name) {
-  return "Minu lemmik reisisihtkoht on " + name + "!";
+  return "Minu lemmik reisisihtkoht on " + name + ".";
 }
 
 app.get('/travel', (req, res) => {
-  res.send("Minu lemmik reisisihtkoht on Jaapan.");
+res.send({"text": hello("Jaapan")});
 });
 
 if (require.main === module) {
